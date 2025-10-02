@@ -15,7 +15,8 @@
             "summer",
             "ocean",
             "ma"
-        ]
+        ],
+        "owner": 2
     },
     {
         "id": 54781,
@@ -31,7 +32,8 @@
             "mountain",
             "snow",
             "winter"
-        ]
+        ],
+        "owner": 1
     },
     {
         "id": 83927,
@@ -48,7 +50,8 @@
             "forest",
             "mist",
             "trees"
-        ]
+        ],
+        "owner": 2
     },
     {
         "id": 29475,
@@ -64,7 +67,8 @@
             "city",
             "night",
             "skyline"
-        ]
+        ],
+        "owner": 1
     },
     {
         "id": 76291,
@@ -80,7 +84,8 @@
             "desert",
             "sand",
             "sun"
-        ]
+        ],
+        "owner": 2
     },
     {
         "id": 15483,
@@ -97,7 +102,8 @@
             "lake",
             "reflection",
             "nature"
-        ]
+        ],
+        "owner": 1
     },
     {
         "id": 94712,
@@ -113,7 +119,8 @@
             "bridge",
             "river",
             "historic"
-        ]
+        ],
+        "owner": 2
     },
     {
         "id": 67124,
@@ -129,7 +136,8 @@
             "garden",
             "flowers",
             "spring"
-        ]
+        ],
+        "owner": 2
     },
     {
         "id": 43562,
@@ -145,7 +153,8 @@
             "cat",
             "pet",
             "animal"
-        ]
+        ],
+        "owner": 1
     },
     {
         "id": 82391,
@@ -161,7 +170,8 @@
             "dog",
             "park",
             "pet"
-        ]
+        ],
+        "owner": 2
     },
     {
         "id": 25498,
@@ -178,7 +188,8 @@
             "waterfall",
             "river",
             "nature"
-        ]
+        ],
+        "owner": 1
     },
     {
         "id": 99813,
@@ -194,7 +205,8 @@
             "island",
             "sea",
             "travel"
-        ]
+        ],
+        "owner": 1
     },
     {
         "id": 34567,
@@ -210,7 +222,8 @@
             "road",
             "travel",
             "landscape"
-        ]
+        ],
+        "owner": 2
     },
     {
         "id": 57283,
@@ -226,7 +239,8 @@
             "castle",
             "historic",
             "architecture"
-        ]
+        ],
+        "owner": 2
     },
     {
         "id": 61342,
@@ -242,7 +256,8 @@
             "market",
             "people",
             "culture"
-        ]
+        ],
+        "owner": 2
     },
     {
         "id": 46718,
@@ -259,7 +274,8 @@
             "cliff",
             "ocean",
             "landscape"
-        ]
+        ],
+        "owner": 1
     },
     {
         "id": 73109,
@@ -275,7 +291,8 @@
             "cave",
             "rocks",
             "explore"
-        ]
+        ],
+        "owner": 2
     },
     {
         "id": 82941,
@@ -292,7 +309,8 @@
             "river",
             "valley",
             "water"
-        ]
+        ],
+        "owner": 2
     },
     {
         "id": 90215,
@@ -309,7 +327,8 @@
             "temple",
             "ancient",
             "culture"
-        ]
+        ],
+        "owner": 1
     },
     {
         "id": 78452,
@@ -326,6 +345,7 @@
             "sunset",
             "ocean",
             "sky"
-        ]
+        ],
+        "owner": 2
     }
 ]

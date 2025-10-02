@@ -2,7 +2,7 @@ const fs = require('fs').promises
 
 /**
  * Asynchronously loads and parses a JSON file.
- * @param {string} fileName The path to the JSON file to be loaded.
+ * @param {string} fileName - The path to the JSON file to be loaded.
  * @returns {Promise<object|Array|null>} A promise that resolves to the parsed JSON data, or null if an error occurs.
  */
 async function loadFile(fileName) {

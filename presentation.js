@@ -13,7 +13,25 @@ const prompt = promptSync()
  * @returns {Promise<void>} This function does not return a value.
  */
 async function main() {
+    // Authentication loop
+    let currentUser = null
+    while (!currentUser) {
+        console.log("\n----- Photo App Login -----")
+        const username = prompt("Enter your username: ")
+        const password = prompt("Enter your password: ")
+        
+        const authResult = await business.authenticateUser(username, password)
+        if (authResult.success) {
+            currentUser = authResult.user
+            console.log(`\nWelcome, ${currentUser.username}!`)
+        } else {
+            console.log(authResult.message)
+        }
+    }
+    
+    // Main application loop
     while (true) {
+
         console.log("\n----- Photo App Menu -----")
         console.log("1. Find Photo")
         console.log("2. Update Photo Details")
@@ -32,7 +50,7 @@ async function main() {
             if (isNaN(photoIdToFind)) {
                 console.log("Invalid ID. Please enter a number.")
             } else {
-                const result = await business.findPhoto(photoIdToFind)
+                const result = await business.findPhoto(photoIdToFind, currentUser.id)
                 if (result.success) {
                     const photo = result.photo
                     const date = new Date(photo.date)
@@ -40,6 +58,7 @@ async function main() {
                     console.log(`\nFilename: ${photo.filename}`)
                     console.log(`Title: ${photo.title}`)
                     console.log(`Date: ${readableDate}`)
+                    console.log(`Owner: ${photo.ownerName}`)
                     console.log(`Albums: ${photo.albumNames.join(', ')}`)
                     console.log(`Tags: ${photo.tags.join(', ')}`)
                 } else {
@@ -54,14 +73,14 @@ async function main() {
             if (isNaN(photoIdToUpdate)) {
                 console.log("Invalid ID. Please enter a number.")
             } else {
-                const result = await business.getPhotoForUpdate(photoIdToUpdate)
+                const result = await business.getPhotoForUpdate(photoIdToUpdate, currentUser.id)
                 if (result.success) {
                     const photo = result.photo
                     console.log("Press Enter to keep the current value.")
                     const newTitle = prompt(`New title [${photo.title}]: `)
                     const newDescription = prompt(`New description [${photo.description}]: `)
                     
-                    const updateResult = await business.updatePhotoDetails(photoIdToUpdate, newTitle, newDescription)
+                    const updateResult = await business.updatePhotoDetails(photoIdToUpdate, newTitle, newDescription, currentUser.id)
                     console.log(updateResult.message)
                 } else {
                     console.log(result.message)
@@ -90,7 +109,7 @@ async function main() {
                 console.log("Invalid ID. Please enter a number.")
             } else {
                 const newTag = prompt("Enter the new tag to add: ")
-                const result = await business.addTagToPhoto(photoIdToTag, newTag)
+                const result = await business.addTagToPhoto(photoIdToTag, newTag, currentUser.id)
                 console.log(result.message)
             }
         } else if (selection === 5) {
@@ -104,3 +123,5 @@ async function main() {
 
 // This is the line that officially starts our program
 main()
+
+
