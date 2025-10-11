@@ -1,26 +1,6 @@
 const persistence = require('./persistence.js')
 
-/**
- * Validate user credentials
- * @param {string} username - username
- * @param {string} password - password
- * @returns {Promise<boolean>} true if valid, false otherwise
- */
-/**
- * Validate user credentials and return the user object on success
- * @param {string} username - username
- * @param {string} password - password
- * @returns {Promise<Object|null>} user object if valid, otherwise null
- */
-async function validateUser(username, password) {
-    const users = await persistence.loadUsers()
-    for (let i = 0; i < users.length; i++) {
-        if (users[i].username === username && users[i].password === password) {
-            return users[i]
-        }
-    }
-    return null
-}
+
 
 /**
  * Check whether the given user id owns the photo
@@ -169,6 +149,5 @@ module.exports = {
     addTagToPhoto,
     albumPhotoListCsv,
     formatDate,
-    validateUser,
     ownPhoto
 }

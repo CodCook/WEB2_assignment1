@@ -1,33 +1,6 @@
 const promptSync = require('prompt-sync')()
 const business = require('./business.js')
 
-/**
- * The currently logged in user object
- * @type {Object|null}
- */
-let currentUser = null
-
-/**
- * Prompt the user for credentials and validate
- * @returns {Promise<Object|null>} user object or null
- */
-async function userLogin() {
-    const username = promptSync('Enter username: ')
-    const password = promptSync('Enter password: ')
-    try {
-        const user = await business.validateUser(username, password)
-        if (!user) {
-            console.log('Invalid credentials')
-            return null
-        }
-        console.log('Login successful')
-        return user
-    } catch (e) {
-        console.log('An error occurred during login')
-        return null
-    }
-}
-
 
 /**
  * Display the main menu to the user
@@ -70,15 +43,7 @@ async function handleFindPhoto() {
             console.log('Photo not found')
             return
         }
-        if (!currentUser) {
-            console.log('Not logged in')
-            return
-        }
-        const isOwner = await business.ownPhoto(id, currentUser.id)
-        if (!isOwner) {
-            console.log('You do not own this photo')
-            return
-        }
+        // login removed: do not check ownership here
         console.log('\nPhoto Details:')
         console.log('Filename: ' + details.fileName)
         console.log('Title: ' + details.title)
@@ -99,10 +64,6 @@ async function handleUpdatePhoto() {
     const id = parseInt(input, 10)
     if (isNaN(id)) {
         console.log('Invalid id')
-        return
-    }
-    if (!(await business.ownPhoto(id, currentUser.id))) {
-        console.log('You do not own this photo')
         return
     }
     const photo = await business.getPhotoDetails(id)
@@ -152,10 +113,6 @@ async function handleTagPhoto() {
     const id = parseInt(input, 10)
     if (isNaN(id)) {
         console.log('Invalid id')
-        return
-    }
-    if (!(await business.ownPhoto(id, currentUser.id))) {
-        console.log('You do not own this photo')
         return
     }
     const tag = promptSync('Enter tag to add: ')
@@ -210,12 +167,7 @@ async function main() {
  * Start the application: perform login then enter main loop
  */
 async function start() {
-    const user = await userLogin()
-    if (!user) {
-        process.exit(1)
-        return
-    }
-    currentUser = user
+    // login removed: start application directly
     await main()
 }
 

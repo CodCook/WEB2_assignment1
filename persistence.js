@@ -1,9 +1,6 @@
 const fs  = require('fs/promises')
 
 
-async function loadUsers(){
-    return await loadData('users.json')
-}
 
 /**
  * Load JSON data from a file
@@ -208,5 +205,4 @@ module.exports = {
     savePhotos,
     updatePhoto,
     addTagToPhoto,
-    loadUsers
 }
