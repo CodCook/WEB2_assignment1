@@ -1,237 +1,174 @@
-const data = require('./persistence.js')
+const persistence = require('./persistence.js')
 
 /**
- * Authenticates a user with username and password.
- * @param {string} username The username to authenticate
- * @param {string} password The password to authenticate
- * @returns {Promise<object>} Object with success status and user data or error message
+ * Validate user credentials
+ * @param {string} username - username
+ * @param {string} password - password
+ * @returns {Promise<boolean>} true if valid, false otherwise
  */
-async function authenticateUser(username, password) {
-    const allUsers = await data.loadFile('users.json')
-    
-    if (!allUsers) {
-        return { success: false, message: "Error loading user data." }
-    }
-    
-    // Find user by username and check password (business logic)
-    for (let i = 0; i < allUsers.length; i++) {
-        if (allUsers[i].username === username && allUsers[i].password === password) {
-            return { 
-                success: true, 
-                user: { 
-                    id: allUsers[i].id, 
-                    username: allUsers[i].username 
-                } 
-            }
+/**
+ * Validate user credentials and return the user object on success
+ * @param {string} username - username
+ * @param {string} password - password
+ * @returns {Promise<Object|null>} user object if valid, otherwise null
+ */
+async function validateUser(username, password) {
+    const users = await persistence.loadUsers()
+    for (let i = 0; i < users.length; i++) {
+        if (users[i].username === username && users[i].password === password) {
+            return users[i]
         }
     }
-    
-    return { success: false, message: "Invalid username or password." }
+    return null
 }
 
 /**
- * Checks if a user owns a specific photo.
- * @param {number} userId The ID of the user
- * @param {number} photoId The ID of the photo
- * @returns {Promise<object>} Object with success status and ownership info
+ * Check whether the given user id owns the photo
+ * @param {number} id - photo id
+ * @param {number} userId - id of the user
+ * @returns {Promise<boolean>} true if owner, false otherwise
  */
-async function checkPhotoOwnership(userId, photoId) {
-    const photo = await data.findPhotoById(photoId)
-    
+async function ownPhoto(id, userId) {
+    const photo = await persistence.findPhotoById(id)
     if (!photo) {
-        return { success: false, message: "Photo not found." }
+        return false
     }
-    
-    if (photo.owner !== userId) {
-        return { success: false, message: "Access denied. You can only access your own photos." }
-    }
-    
-    return { success: true, photo: photo }
+    return photo.owner === userId
 }
 
 /**
- * Finds a specific photo by its ID and returns its details with album names.
- * @param {number} photoId The ID of the photo to find
- * @param {number} userId The ID of the logged-in user
- * @returns {Promise<object>} Object with success status, photo data or error message
+ * Get details for a photo by id
+ * @param {number} id - photo id
+ * @returns {Promise<Object|null>} details or null
  */
-async function findPhoto(photoId, userId) {
-    // Check ownership first
-    const ownershipCheck = await checkPhotoOwnership(userId, photoId)
-    if (!ownershipCheck.success) {
-        return ownershipCheck
-    }
-    
-    const photosData = ownershipCheck.photo
-    const allAlbums = await data.loadFile('albums.json')
-    const allUsers = await data.loadFile('users.json')
-
-    if (!allAlbums || !allUsers) {
-        return { success: false, message: "Error loading data files." }
+async function getPhotoDetails(id) {
+    const photo = await persistence.findPhotoById(id)
+    if (!photo) {
+        return null
     }
 
-    // Convert album IDs to album names (business logic)
+    const albumIds = Array.isArray(photo.albums) ? photo.albums : []
+    const albums = await persistence.getAlbumsByIds(albumIds)
     const albumNames = []
-    for (let i = 0; i < photosData.albums.length; i++) {
-        const albumId = photosData.albums[i]
-        for (let j = 0; j < allAlbums.length; j++) {
-            if (allAlbums[j].id === albumId) {
-                albumNames.push(allAlbums[j].name)
-            }
-        }
-    }
-
-    // Convert owner ID to owner name (business logic)
-    let ownerName = "Unknown"
-    if (photosData.owner) {
-        for (let i = 0; i < allUsers.length; i++) {
-            if (allUsers[i].id === photosData.owner) {
-                ownerName = allUsers[i].username
-                break
-            }
-        }
+    for (let i = 0; i < albums.length; i++) {
+        albumNames.push(albums[i].name)
     }
 
     return {
-        success: true,
-        photo: {
-            ...photosData,
-            albumNames: albumNames,
-            ownerName: ownerName
+        fileName: photo.filename,
+        title: photo.title,
+        tags: Array.isArray(photo.tags) ? photo.tags : [],
+        albumNames: albumNames,
+        formattedDate: formatDate(photo.date),
+        description: photo.description
+    }
+}
+
+/**
+ * Update a photo's title/description
+ * @param {number} id - photo id
+ * @param {string|null|undefined} title - new title or null/undefined to skip
+ * @param {string|null|undefined} description - new description or null/undefined to skip
+ * @returns {Promise<Object>} persistence result
+ */
+async function updatePhoto(id, title, description) {
+    return await persistence.updatePhoto(id, title, description)
+}
+
+/**
+ * Add a tag to a photo (business validation then persist)
+ * @param {number} photoId - photo id
+ * @param {string} tag - tag to add
+ * @returns {Promise<Object>} result
+ */
+async function addTagToPhoto(photoId, tag) {
+    if (!tag || typeof tag !== 'string' || tag.trim() === '') {
+        return { success: false, message: 'Invalid tag' }
+    }
+    const photo = await persistence.findPhotoById(photoId)
+    if (!photo) {
+        return { success: false, message: 'Photo not found' }
+    }
+    const tags = Array.isArray(photo.tags) ? photo.tags : []
+    for (let i = 0; i < tags.length; i++) {
+        if (tags[i].toLowerCase() === tag.toLowerCase()) {
+            return { success: false, message: 'Tag already exists' }
         }
     }
+    return await persistence.addTagToPhoto(photoId, tag)
 }
 
 /**
- * Gets a photo for updating purposes.
- * @param {number} photoId The ID of the photo to get
- * @param {number} userId The ID of the logged-in user
- * @returns {Promise<object>} Object with success status and photo data or error message
+ * Build a CSV-like list of photos for an album name
+ * @param {string} albumName - album name to search (case-insensitive exact)
+ * @returns {Promise<Object>} { success, csv } or error message
  */
-async function getPhotoForUpdate(photoId, userId) {
-    // Check ownership first
-    const ownershipCheck = await checkPhotoOwnership(userId, photoId)
-    if (!ownershipCheck.success) {
-        return ownershipCheck
+async function albumPhotoListCsv(albumName) {
+    const matching = await persistence.findAlbumsByName(albumName)
+    if (!matching || matching.length === 0) {
+        return { success: false, message: 'Album not found: ' + albumName }
     }
-    
-    return { success: true, photo: ownershipCheck.photo }
-}
+    const albumIds = []
+    for (let i = 0; i < matching.length; i++) {
+        albumIds.push(matching[i].id)
+    }
+    const photos = await persistence.getPhotosByAlbumIds(albumIds)
 
-/**
- * Updates the title and description of a photo identified by its ID.
- * @param {number} photoId The ID of the photo to update
- * @param {string} newTitle The new title (empty string means keep current)
- * @param {string} newDescription The new description (empty string means keep current)
- * @param {number} userId The ID of the logged-in user
- * @returns {Promise<object>} Object with success status and message
- */
-async function updatePhotoDetails(photoId, newTitle, newDescription, userId) {
-    // Check ownership first
-    const ownershipCheck = await checkPhotoOwnership(userId, photoId)
-    if (!ownershipCheck.success) {
-        return ownershipCheck
+    const lines = []
+    lines.push('filename,resolution,tags')
+    for (let i = 0; i < photos.length; i++) {
+        const p = photos[i]
+        const filename = p.filename || ''
+        const resolution = p.resolution || ''
+        let tags = ''
+        if (Array.isArray(p.tags)) {
+            for (let j = 0; j < p.tags.length; j++) {
+                if (j === 0) {
+                    tags = p.tags[j]
+                } else {
+                    tags = tags + ':' + p.tags[j]
+                }
+            }
+        }
+        lines.push(filename + ',' + resolution + ',' + tags)
     }
-    
-    const photo = ownershipCheck.photo
-    
-    // Apply business logic for updates
-    if (newTitle !== "") {
-        photo.title = newTitle
-    }
-    
-    if (newDescription !== "") {
-        photo.description = newDescription
-    }
-    
-    const saveResult = await data.updatePhoto(photoId, photo)
-    
-    if (saveResult) {
-        return { success: true, message: "Photo has been updated successfully!" }
-    } else {
-        return { success: false, message: "Error updating photo." }
-    }
-}
 
-/**
- * Lists all photos belonging to a specific album.
- * @param {string} albumName The name of the album to search for
- * @returns {Promise<object>} Object with success status, photos array or error message
- */
-async function listAlbumPhotos(albumName) {
-    const allAlbums = await data.loadFile('albums.json')
-    
-    if (!allAlbums) {
-        return { success: false, message: "Error loading albums data." }
-    }
-    
-    // Find album by name (case-insensitive business logic)
-    let albumId = -1
-    for (let i = 0; i < allAlbums.length; i++) {
-        if (allAlbums[i].name.toLowerCase() === albumName.toLowerCase()) {
-            albumId = allAlbums[i].id
-            break
+    let csv = ''
+    for (let i = 0; i < lines.length; i++) {
+        if (i === 0) {
+            csv = lines[i]
+        } else {
+            csv = csv + '\n' + lines[i]
         }
     }
-    
-    if (albumId === -1) {
-        return { success: false, message: "Sorry, an album with that name could not be found." }
-    }
-    
-    const photos = await data.findPhotosByAlbum(albumId)
-    
-    if (!photos) {
-        return { success: false, message: "Error loading photos data." }
-    }
-    
-    return { success: true, photos: photos }
+
+    return { success: true, csv: csv }
 }
 
 /**
- * Adds a new tag to a photo, preventing duplicates.
- * @param {number} photoId The ID of the photo to tag
- * @param {string} newTag The tag to add
- * @param {number} userId The ID of the logged-in user
- * @returns {Promise<object>} Object with success status and message
+ * Format an ISO date string into 'Month D, YYYY'
+ * @param {string} iso - ISO date string
+ * @returns {string} formatted date or original input on failure
  */
-async function addTagToPhoto(photoId, newTag, userId) {
-    // Check ownership first
-    const ownershipCheck = await checkPhotoOwnership(userId, photoId)
-    if (!ownershipCheck.success) {
-        return ownershipCheck
-    }
-    
-    const photo = ownershipCheck.photo
-    
-    // Business logic: check for duplicate tags (case-insensitive)
-    let tagAlreadyExists = false
-    for (let i = 0; i < photo.tags.length; i++) {
-        if (photo.tags[i].toLowerCase() === newTag.toLowerCase()) {
-            tagAlreadyExists = true
-            break
-        }
-    }
-    
-    if (tagAlreadyExists) {
-        return { success: false, message: `The tag "${newTag}" already exists on this photo.` }
-    }
-    
-    photo.tags.push(newTag)
-    const saveResult = await data.updatePhoto(photoId, photo)
-    
-    if (saveResult) {
-        return { success: true, message: "Tag added successfully!" }
-    } else {
-        return { success: false, message: "Error adding tag." }
+function formatDate(iso) {
+    try {
+        const d = new Date(iso)
+        const monthNames = [
+            'January', 'February', 'March', 'April', 'May', 'June',
+            'July', 'August', 'September', 'October', 'November', 'December'
+        ]
+        return monthNames[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear()
+    } catch (e) {
+        return iso
     }
 }
-
 
 module.exports = {
-    authenticateUser,
-    findPhoto,
-    getPhotoForUpdate,
-    updatePhotoDetails,
-    listAlbumPhotos,
-    addTagToPhoto
+    getPhotoDetails,
+    updatePhoto,
+    addTagToPhoto,
+    albumPhotoListCsv,
+    formatDate,
+    validateUser,
+    ownPhoto
 }

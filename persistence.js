@@ -1,100 +1,212 @@
-const fs = require('fs').promises
+const fs  = require('fs/promises')
 
-/**
- * Asynchronously loads and parses a JSON file.
- * @param {string} fileName - The path to the JSON file to be loaded.
- * @returns {Promise<object|Array|null>} A promise that resolves to the parsed JSON data, or null if an error occurs.
- */
-async function loadFile(fileName) {
-    try {
-        const fileContent = await fs.readFile(fileName, 'utf8')
-        return JSON.parse(fileContent)
-    } catch (error) {
-        return null
-    }
+
+async function loadUsers(){
+    return await loadData('users.json')
 }
 
 /**
- * Asynchronously saves data to a JSON file.
- * @param {string} fileName The path to the JSON file where data will be saved.
- * @param {object|Array} data The JavaScript object or array to be saved.
- * @returns {Promise<boolean>} A promise that resolves to true on success, or false on failure.
+ * Load JSON data from a file
+ * @param {string} fileName - path to JSON file
+ * @returns {Promise<any>} parsed JSON
  */
-async function saveFile(fileName, data) {
-    try {
-        const fileContent = JSON.stringify(data, null, 4)
-        await fs.writeFile(fileName, fileContent)
-        return true
-    } catch (error) {
-        return false
-    }
+async function loadData(fileName) {
+    const content = await fs.readFile(fileName, 'utf-8')
+    return JSON.parse(content)
 }
 
 /**
- * Finds a photo by its ID from the photos.json file.
- * @param {number} photoId The ID of the photo to find
- * @returns {Promise<object|null>} The photo object or null if not found
+ * Save JSON data to a file
+ * @param {string} fileName - path to JSON file
+ * @param {any} data - data to serialize
+ * @returns {Promise<void>}
  */
-async function findPhotoById(photoId) {
-    const photosData = await loadFile('photos.json')
-    
-    if (!photosData) return null
-    
-    // Handle both single object and array formats
-    if (Array.isArray(photosData)) {
-        return photosData.find(photo => photo.id === photoId) || null
-    } else {
-        return photosData.id === photoId ? photosData : null
-    }
+async function saveData(fileName, data) {
+    await fs.writeFile(fileName, JSON.stringify(data, null, 2))
+    // keep logging for visibility
+    console.log(`Data saved to ${fileName}`)
 }
 
 /**
- * Updates a photo by its ID in the photos.json file.
- * @param {number} photoId The ID of the photo to update
- * @param {object} updatedPhoto The updated photo object
- * @returns {Promise<boolean>} True if successful, false otherwise
+ * Get all photos from storage
+ * @returns {Promise<Array>} list of photo objects
  */
-async function updatePhoto(photoId, updatedPhoto) {
-    const photosData = await loadFile('photos.json')
-    
-    if (!photosData) return false
-    
-    // Handle both single object and array formats
-    if (Array.isArray(photosData)) {
-        const index = photosData.findIndex(photo => photo.id === photoId)
-        if (index === -1) return false
-        photosData[index] = updatedPhoto
-        return await saveFile('photos.json', photosData)
-    } else {
-        if (photosData.id === photoId) {
-            return await saveFile('photos.json', updatedPhoto)
+async function getAllPhotos() {
+    return await loadData('photos.json')
+}
+
+/**
+ * Get all albums from storage
+ * @returns {Promise<Array>} list of album objects
+ */
+async function getAllAlbums() {
+    return await loadData('albums.json')
+}
+
+/**
+ * Find a photo by id
+ * @param {number} id - photo id
+ * @returns {Promise<Object|null>} photo object or null
+ */
+async function findPhotoById(id) {
+    const photos = await getAllPhotos()
+    for (let i = 0; i < photos.length; i++) {
+        if (photos[i].id === id) {
+            return photos[i]
         }
-        return false
     }
+    return null
 }
 
 /**
- * Finds all photos belonging to a specific album.
- * @param {number} albumId The ID of the album
- * @returns {Promise<Array>} Array of photos in the album
+ * Return album objects matching provided ids
+ * @param {Array<number>} ids - album ids
+ * @returns {Promise<Array>} album objects
  */
-async function findPhotosByAlbum(albumId) {
-    const photosData = await loadFile('photos.json')
-    
-    if (!photosData) return []
-    
-    // Handle both single object and array formats
-    if (Array.isArray(photosData)) {
-        return photosData.filter(photo => photo.albums.includes(albumId))
-    } else {
-        return photosData.albums.includes(albumId) ? [photosData] : []
+async function getAlbumsByIds(ids) {
+    const albums = await getAllAlbums()
+    const result = []
+    for (let i = 0; i < albums.length; i++) {
+        for (let j = 0; j < ids.length; j++) {
+            if (albums[i].id === ids[j]) {
+                result.push(albums[i])
+                break
+            }
+        }
     }
+    return result
+}
+
+/**
+ * Find albums by exact name (case-insensitive)
+ * @param {string} name - album name
+ * @returns {Promise<Array>} matching album objects
+ */
+async function findAlbumsByName(name) {
+    const albums = await getAllAlbums()
+    const target = (name || '').toLowerCase()
+    const matches = []
+    for (let i = 0; i < albums.length; i++) {
+        if (albums[i].name && albums[i].name.toLowerCase() === target) {
+            matches.push(albums[i])
+        }
+    }
+    return matches
+}
+
+/**
+ * Get photos that belong to any of the provided album ids
+ * @param {Array<number>} albumIds - album ids
+ * @returns {Promise<Array>} matching photos
+ */
+async function getPhotosByAlbumIds(albumIds) {
+    const photos = await getAllPhotos()
+    if (!Array.isArray(albumIds) || albumIds.length === 0) {
+        return []
+    }
+    const result = []
+    for (let i = 0; i < photos.length; i++) {
+        const photo = photos[i]
+        if (!Array.isArray(photo.albums)) {
+            continue
+        }
+        let belongs = false
+        for (let j = 0; j < photo.albums.length; j++) {
+            for (let k = 0; k < albumIds.length; k++) {
+                if (photo.albums[j] === albumIds[k]) {
+                    belongs = true
+                    break
+                }
+            }
+            if (belongs) {
+                break
+            }
+        }
+        if (belongs) {
+            result.push(photo)
+        }
+    }
+    return result
+}
+
+/**
+ * Save photos array back to storage
+ * @param {Array} photos - photos array
+ * @returns {Promise<void>}
+ */
+async function savePhotos(photos) {
+    return await saveData('photos.json', photos)
+}
+
+/**
+ * Update a photo title/description and persist
+ * @param {number} id - photo id
+ * @param {string|null|undefined} title - new title or null/undefined to skip
+ * @param {string|null|undefined} description - new description or null/undefined to skip
+ * @returns {Promise<Object>} { success: boolean }
+ */
+async function updatePhoto(id, title, description) {
+    const photos = await getAllPhotos()
+    let found = false
+    for (let i = 0; i < photos.length; i++) {
+        if (photos[i].id === id) {
+            found = true
+            if (title !== null && title !== undefined) {
+                photos[i].title = title
+            }
+            if (description !== null && description !== undefined) {
+                photos[i].description = description
+            }
+            break
+        }
+    }
+    if (found) {
+        await savePhotos(photos)
+        return { success: true }
+    }
+    return { success: false }
+}
+
+/**
+ * Add a tag to a photo and persist (idempotent)
+ * @param {number} id - photo id
+ * @param {string} tag - tag to add
+ * @returns {Promise<Object>} result object
+ */
+async function addTagToPhoto(id, tag) {
+    const photos = await getAllPhotos()
+    for (let i = 0; i < photos.length; i++) {
+        if (photos[i].id === id) {
+            if (!Array.isArray(photos[i].tags)) {
+                photos[i].tags = []
+            }
+            let exists = false
+            for (let j = 0; j < photos[i].tags.length; j++) {
+                if (photos[i].tags[j].toLowerCase() === (tag || '').toLowerCase()) {
+                    exists = true
+                    break
+                }
+            }
+            if (!exists) {
+                photos[i].tags.push(tag)
+                await savePhotos(photos)
+                return { success: true, message: 'Updated' }
+            }
+            return { success: false, message: 'Tag already exists' }
+        }
+    }
+    return { success: false, message: 'Photo not found' }
 }
 
 module.exports = {
-    loadFile,
-    saveFile,
+    getAllPhotos,
+    getAllAlbums,
     findPhotoById,
+    getAlbumsByIds,
+    findAlbumsByName,
+    getPhotosByAlbumIds,
+    savePhotos,
     updatePhoto,
-    findPhotosByAlbum
+    addTagToPhoto,
+    loadUsers
 }
