@@ -3,6 +3,7 @@
   "type": "commonjs",
   "dependencies": {
     "fs": "^0.0.1-security",
+    "mongodb": "^6.20.0",
     "prompt-sync": "^4.2.0"
   }
 }

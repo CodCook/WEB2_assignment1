@@ -1,4 +1,14 @@
 const fs  = require('fs/promises')
+const {MongoClient} = require('mongodb')
+
+let client = undefined
+
+async function connectToDb(){
+    if (!client){
+        client = new MongoClient('mongodb+srv://60304062:class1234@cluster0mahgoub.potrxqn.mongodb.net/')
+        await client.connect()
+    }
+}
 
 
 
@@ -7,9 +17,11 @@ const fs  = require('fs/promises')
  * @param {string} fileName - path to JSON file
  * @returns {Promise<any>} parsed JSON
  */
-async function loadData(fileName) {
-    const content = await fs.readFile(fileName, 'utf-8')
-    return JSON.parse(content)
+async function loadPhotos() {
+    await connectToDb()
+    const db = client.db('infs3201_fall2025')
+    const photos = await db.collection('photos')
+    return await photos.find().toArray()
 }
 
 /**
@@ -18,26 +30,16 @@ async function loadData(fileName) {
  * @param {any} data - data to serialize
  * @returns {Promise<void>}
  */
-async function saveData(fileName, data) {
-    await fs.writeFile(fileName, JSON.stringify(data, null, 2))
-    // keep logging for visibility
-    console.log(`Data saved to ${fileName}`)
-}
-
-/**
- * Get all photos from storage
- * @returns {Promise<Array>} list of photo objects
- */
-async function getAllPhotos() {
-    return await loadData('photos.json')
-}
 
 /**
  * Get all albums from storage
  * @returns {Promise<Array>} list of album objects
  */
 async function getAllAlbums() {
-    return await loadData('albums.json')
+    await connectToDb()
+    const db = client.db('infs3201_fall2025')
+    const albums = await db.collection('albums')
+    return await albums.find().toArray()
 }
 
 /**
@@ -46,7 +48,7 @@ async function getAllAlbums() {
  * @returns {Promise<Object|null>} photo object or null
  */
 async function findPhotoById(id) {
-    const photos = await getAllPhotos()
+    const photos = await loadPhotos()
     for (let i = 0; i < photos.length; i++) {
         if (photos[i].id === id) {
             return photos[i]
@@ -97,7 +99,7 @@ async function findAlbumsByName(name) {
  * @returns {Promise<Array>} matching photos
  */
 async function getPhotosByAlbumIds(albumIds) {
-    const photos = await getAllPhotos()
+    const photos = await loadPhotos()
     if (!Array.isArray(albumIds) || albumIds.length === 0) {
         return []
     }
@@ -127,15 +129,6 @@ async function getPhotosByAlbumIds(albumIds) {
 }
 
 /**
- * Save photos array back to storage
- * @param {Array} photos - photos array
- * @returns {Promise<void>}
- */
-async function savePhotos(photos) {
-    return await saveData('photos.json', photos)
-}
-
-/**
  * Update a photo title/description and persist
  * @param {number} id - photo id
  * @param {string|null|undefined} title - new title or null/undefined to skip
@@ -143,22 +136,19 @@ async function savePhotos(photos) {
  * @returns {Promise<Object>} { success: boolean }
  */
 async function updatePhoto(id, title, description) {
+    await connectToDb()
+    const db = client.db('infs3201_fall2025')
+    const photosCollection = db.collection('photos')
     const photos = await getAllPhotos()
     let found = false
-    for (let i = 0; i < photos.length; i++) {
-        if (photos[i].id === id) {
-            found = true
-            if (title !== null && title !== undefined) {
-                photos[i].title = title
-            }
-            if (description !== null && description !== undefined) {
-                photos[i].description = description
-            }
-            break
-        }
+    if (title !== null && title !== undefined) {
+        updatedTitle = await photosCollection.updateOne({ id: id }, { $set: { title: title } })
+        
     }
-    if (found) {
-        await savePhotos(photos)
+    if (description !== null && description !== undefined) {
+        updatedDescription = await photosCollection.updateOne({ id: id }, { $set: { description: description } })
+    }
+    if (updatedTitle && updatedDescription) {
         return { success: true }
     }
     return { success: false }
@@ -171,7 +161,10 @@ async function updatePhoto(id, title, description) {
  * @returns {Promise<Object>} result object
  */
 async function addTagToPhoto(id, tag) {
-    const photos = await getAllPhotos()
+    await connectToDb()
+    const db = client.db('infs3201_fall2025')
+    const photosCollection = db.collection('photos')
+    const photos = await loadPhotos()
     for (let i = 0; i < photos.length; i++) {
         if (photos[i].id === id) {
             if (!Array.isArray(photos[i].tags)) {
@@ -196,13 +189,12 @@ async function addTagToPhoto(id, tag) {
 }
 
 module.exports = {
-    getAllPhotos,
+    loadPhotos,
     getAllAlbums,
     findPhotoById,
     getAlbumsByIds,
     findAlbumsByName,
     getPhotosByAlbumIds,
-    savePhotos,
     updatePhoto,
     addTagToPhoto,
 }

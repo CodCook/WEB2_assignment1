@@ -1,21 +1,5 @@
 const persistence = require('./persistence.js')
 
-
-
-/**
- * Check whether the given user id owns the photo
- * @param {number} id - photo id
- * @param {number} userId - id of the user
- * @returns {Promise<boolean>} true if owner, false otherwise
- */
-async function ownPhoto(id, userId) {
-    const photo = await persistence.findPhotoById(id)
-    if (!photo) {
-        return false
-    }
-    return photo.owner === userId
-}
-
 /**
  * Get details for a photo by id
  * @param {number} id - photo id
@@ -148,6 +132,5 @@ module.exports = {
     updatePhoto,
     addTagToPhoto,
     albumPhotoListCsv,
-    formatDate,
-    ownPhoto
+    formatDate
 }
