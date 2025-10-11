@@ -139,16 +139,18 @@ async function updatePhoto(id, title, description) {
     await connectToDb()
     const db = client.db('infs3201_fall2025')
     const photosCollection = db.collection('photos')
-    const photos = await getAllPhotos()
-    let found = false
+    let updateFields = {}
     if (title !== null && title !== undefined) {
-        updatedTitle = await photosCollection.updateOne({ id: id }, { $set: { title: title } })
-        
+        updateFields.title = title
     }
     if (description !== null && description !== undefined) {
-        updatedDescription = await photosCollection.updateOne({ id: id }, { $set: { description: description } })
+        updateFields.description = description
     }
-    if (updatedTitle && updatedDescription) {
+    if (Object.keys(updateFields).length === 0) {
+        return { success: false }
+    }
+    const result = await photosCollection.updateOne({ id: id }, { $set: updateFields })
+    if (result.modifiedCount > 0) {
         return { success: true }
     }
     return { success: false }
@@ -164,28 +166,15 @@ async function addTagToPhoto(id, tag) {
     await connectToDb()
     const db = client.db('infs3201_fall2025')
     const photosCollection = db.collection('photos')
-    const photos = await loadPhotos()
-    for (let i = 0; i < photos.length; i++) {
-        if (photos[i].id === id) {
-            if (!Array.isArray(photos[i].tags)) {
-                photos[i].tags = []
-            }
-            let exists = false
-            for (let j = 0; j < photos[i].tags.length; j++) {
-                if (photos[i].tags[j].toLowerCase() === (tag || '').toLowerCase()) {
-                    exists = true
-                    break
-                }
-            }
-            if (!exists) {
-                photos[i].tags.push(tag)
-                await savePhotos(photos)
-                return { success: true, message: 'Updated' }
-            }
-            return { success: false, message: 'Tag already exists' }
-        }
+    const photo = await findPhotoById(id)
+    if (photo && photo.tags.includes(tag)) {
+        return { success: true }
     }
-    return { success: false, message: 'Photo not found' }
+    const result = await photosCollection.updateOne({ id: id }, { $addToSet: { tags: tag } })
+    if (result.modifiedCount > 0) {
+        return { success: true }
+    }
+    return { success: false }
 }
 
 module.exports = {

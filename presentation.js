@@ -163,12 +163,4 @@ async function main() {
     console.log('Goodbye')
 }
 
-/**
- * Start the application: perform login then enter main loop
- */
-async function start() {
-    // login removed: start application directly
-    await main()
-}
-
-start()
+main()
