@@ -2,6 +2,8 @@
   "name": "photo-app",
   "type": "commonjs",
   "dependencies": {
+    "express": "^5.1.0",
+    "express-handlebars": "^8.0.2",
     "fs": "^0.0.1-security",
     "mongodb": "^6.20.0",
     "prompt-sync": "^4.2.0"
