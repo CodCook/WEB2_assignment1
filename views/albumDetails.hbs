@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Album</title>
+</head>
+<body>
+    <h1>Photos in {{album.name}} ({{photos.length}})</h1>
+    {{#if photos}}
+        <ul>
+            {{#each photos}}
+                <li>
+                    <a href="/photos/{{this.id}}"><strong>{{this.filename}}</strong></a> - {{this.title}} ({{this.resolution}})
+                </li>
+            {{/each}}
+        </ul>
+    {{else}}
+        <p>No photos in this album</p>
+    {{/if}}
+    <p><a href="/">Back to albums</a></p>
+</body>
+</html>

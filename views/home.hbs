@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>home</title>
+</head>
+<body>
+    <h1>Photo album</h1>
+    <ul>
+        {{#each albums}}
+            <li><a href="/albums/{{this.id}}">{{this.name}}</a></li>
+        {{else}}
+            <p>No albums found</p>
+        {{/each}}
+    </ul>
+</body>
+</html>

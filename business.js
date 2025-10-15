@@ -1,4 +1,6 @@
 const persistence = require('./persistence.js')
+const fs = require('fs/promises')
+const path = require('path')
 
 /**
  * Get details for a photo by id
@@ -18,8 +20,35 @@ async function getPhotoDetails(id) {
         albumNames.push(albums[i].name)
     }
 
+    // determine public URL for the photo file; fall back to placeholder if missing
+    let publicUrl = '/photos/placeholder.svg'
+    if (photo.filename) {
+        // try the exact filename first, then try common alternative extensions (svg, png, jpg)
+        const candidates = [photo.filename]
+        const base = photo.filename.replace(/\.[^.]+$/, '')
+        candidates.push(base + '.svg')
+        candidates.push(base + '.png')
+        candidates.push(base + '.jpg')
+        candidates.push(base + '.jpeg')
+        for (let i = 0; i < candidates.length; i++) {
+            const fn = candidates[i]
+            const publicPath = path.join(process.cwd(), 'public', 'photos', fn)
+            try {
+                const st = await fs.stat(publicPath)
+                if (st && st.isFile()) {
+                    publicUrl = '/photos/' + fn
+                    break
+                }
+            } catch (e) {
+                // not found, try next
+            }
+        }
+    }
+
     return {
-        fileName: photo.filename,
+        id: photo.id,
+        filename: photo.filename,
+        url: publicUrl,
         title: photo.title,
         tags: Array.isArray(photo.tags) ? photo.tags : [],
         albumNames: albumNames,
@@ -37,6 +66,45 @@ async function getPhotoDetails(id) {
  */
 async function updatePhoto(id, title, description) {
     return await persistence.updatePhoto(id, title, description)
+}
+
+async function loadAlbums(){
+    return await persistence.getAllAlbums()
+}
+
+/**
+ * Get album details and its photos by album id or name
+ * @param {string|number} idOrName - album id (number) or album name (string)
+ * @returns {Promise<Object|null>} { album, photos } or null if not found
+ */
+async function getAlbumDetails(idOrName) {
+    // try numeric id first
+    const albums = await persistence.getAllAlbums()
+    let found = null
+    if (typeof idOrName === 'number' || !isNaN(parseInt(idOrName, 10))) {
+        const id = parseInt(idOrName, 10)
+        for (let i = 0; i < albums.length; i++) {
+            if (albums[i].id === id) {
+                found = albums[i]
+                break
+            }
+        }
+    }
+    // fallback: match by name (case-insensitive)
+    if (!found) {
+        const target = ('' + idOrName).toLowerCase()
+        for (let i = 0; i < albums.length; i++) {
+            if (albums[i].name && albums[i].name.toLowerCase() === target) {
+                found = albums[i]
+                break
+            }
+        }
+    }
+    if (!found) {
+        return null
+    }
+    const photos = await persistence.getPhotosByAlbumIds([found.id])
+    return { album: found, photos: photos }
 }
 
 /**
@@ -132,5 +200,7 @@ module.exports = {
     updatePhoto,
     addTagToPhoto,
     albumPhotoListCsv,
-    formatDate
+    formatDate,
+    loadAlbums
+    ,getAlbumDetails
 }
