@@ -39,6 +39,20 @@ app.get('/photos/:id', async (req, res) => {
     res.render('photoDetails', { photo: photo, layout: undefined })
 })
 
+app.get('/edit/:id', async (req, res) => {
+    const id = parseInt(req.params.id, 10)
+    if (isNaN(id)) {
+        res.status(400).send('Invalid photo id')
+        return
+    }
+    const photo = await business.getPhotoDetails(id)
+    if (!photo) {
+        res.status(404).send('Photo not found')
+        return
+    }
+    res.render('editPhoto', { photo: photo, layout: undefined })
+})
+
 app.post('/edit-photo/:id', async (req, res) => {
     const id = parseInt(req.params.id, 10)
     if (isNaN(id)) {
@@ -49,7 +63,8 @@ app.post('/edit-photo/:id', async (req, res) => {
     const description = req.body.description
     try {
         const result = await business.updatePhoto(id, title, description)
-        if (result) {
+        console.log('Update result:', result)
+        if (result && result.success) {
             res.redirect(`/photos/${id}`)
         } else {
             res.status(500).send('Error updating photo')

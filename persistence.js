@@ -150,6 +150,7 @@ async function updatePhoto(id, title, description) {
         return { success: false }
     }
     const result = await photosCollection.updateOne({ id: id }, { $set: updateFields })
+    console.log('persistence.updatePhoto result:', result)
     if (result.modifiedCount > 0) {
         return { success: true }
     }

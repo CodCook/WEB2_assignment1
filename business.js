@@ -65,7 +65,12 @@ async function getPhotoDetails(id) {
  * @returns {Promise<Object>} persistence result
  */
 async function updatePhoto(id, title, description) {
-    return await persistence.updatePhoto(id, title, description)
+    const res = await persistence.updatePhoto(id, title, description)
+    if (res && typeof res === 'object' && 'success' in res) {
+        return res
+    }
+    // normalize legacy truthy/falsy
+    return { success: !!res }
 }
 
 async function loadAlbums(){
