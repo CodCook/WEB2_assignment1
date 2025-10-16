@@ -3,9 +3,9 @@ const fs = require('fs/promises')
 const path = require('path')
 
 /**
- * Get details for a photo by id
+ * Get details for a photo by id and resolve a public URL for the file.
  * @param {number} id - photo id
- * @returns {Promise<Object|null>} details or null
+ * @returns {Promise<Object|null>} details object with fields: id, filename, url, title, tags, albumNames, formattedDate, description; or null if not found
  */
 async function getPhotoDetails(id) {
     const photo = await persistence.findPhotoById(id)
@@ -58,11 +58,11 @@ async function getPhotoDetails(id) {
 }
 
 /**
- * Update a photo's title/description
+ * Update a photo's title/description via persistence layer and normalize the result.
  * @param {number} id - photo id
  * @param {string|null|undefined} title - new title or null/undefined to skip
  * @param {string|null|undefined} description - new description or null/undefined to skip
- * @returns {Promise<Object>} persistence result
+ * @returns {Promise<Object>} { success: boolean }
  */
 async function updatePhoto(id, title, description) {
     const res = await persistence.updatePhoto(id, title, description)
@@ -73,12 +73,17 @@ async function updatePhoto(id, title, description) {
     return { success: !!res }
 }
 
+/**
+ * Load all albums (delegates to persistence).
+ * @returns {Promise<Array>} list of album objects
+ */
 async function loadAlbums(){
     return await persistence.getAllAlbums()
 }
 
 /**
- * Get album details and its photos by album id or name
+ * Get album details and its photos by album id or name.
+ * Accepts numeric id or album name string.
  * @param {string|number} idOrName - album id (number) or album name (string)
  * @returns {Promise<Object|null>} { album, photos } or null if not found
  */
@@ -113,10 +118,10 @@ async function getAlbumDetails(idOrName) {
 }
 
 /**
- * Add a tag to a photo (business validation then persist)
+ * Add a tag to a photo (business validation then persist).
  * @param {number} photoId - photo id
  * @param {string} tag - tag to add
- * @returns {Promise<Object>} result
+ * @returns {Promise<Object>} result ({ success: boolean, message?: string })
  */
 async function addTagToPhoto(photoId, tag) {
     if (!tag || typeof tag !== 'string' || tag.trim() === '') {
@@ -136,9 +141,9 @@ async function addTagToPhoto(photoId, tag) {
 }
 
 /**
- * Build a CSV-like list of photos for an album name
+ * Build a CSV-like list of photos for an album name.
  * @param {string} albumName - album name to search (case-insensitive exact)
- * @returns {Promise<Object>} { success, csv } or error message
+ * @returns {Promise<Object>} { success: boolean, csv?: string, message?: string }
  */
 async function albumPhotoListCsv(albumName) {
     const matching = await persistence.findAlbumsByName(albumName)
@@ -183,7 +188,7 @@ async function albumPhotoListCsv(albumName) {
 }
 
 /**
- * Format an ISO date string into 'Month D, YYYY'
+ * Format an ISO date string into 'Month D, YYYY'. If parsing fails the original value is returned.
  * @param {string} iso - ISO date string
  * @returns {string} formatted date or original input on failure
  */

@@ -3,6 +3,11 @@ const {MongoClient} = require('mongodb')
 
 let client = undefined
 
+/**
+ * Ensure a MongoDB client is connected and cached.
+ * Uses MONGO_URI environment variable when available.
+ * @returns {Promise<void>} resolves when connected
+ */
 async function connectToDb(){
     if (!client){
         // prefer environment variable for credentials, fallback to existing string
@@ -15,9 +20,8 @@ async function connectToDb(){
 
 
 /**
- * Load JSON data from a file
- * @param {string} fileName - path to JSON file
- * @returns {Promise<any>} parsed JSON
+ * Load all photos from the database collection.
+ * @returns {Promise<Array>} array of photo documents
  */
 async function loadPhotos() {
     await connectToDb()
@@ -34,7 +38,7 @@ async function loadPhotos() {
  */
 
 /**
- * Get all albums from storage
+ * Get all albums from the database collection.
  * @returns {Promise<Array>} list of album objects
  */
 async function getAllAlbums() {
@@ -45,7 +49,7 @@ async function getAllAlbums() {
 }
 
 /**
- * Find a photo by id
+ * Find a photo by id in the photos collection.
  * @param {number} id - photo id
  * @returns {Promise<Object|null>} photo object or null
  */
@@ -59,7 +63,7 @@ async function findPhotoById(id) {
 }
 
 /**
- * Return album objects matching provided ids
+ * Return album documents matching provided ids.
  * @param {Array<number>} ids - album ids
  * @returns {Promise<Array>} album objects
  */
@@ -89,7 +93,7 @@ async function findAlbumsByName(name) {
 }
 
 /**
- * Get photos that belong to any of the provided album ids
+ * Get photos that belong to any of the provided album ids.
  * @param {Array<number>} albumIds - album ids
  * @returns {Promise<Array>} matching photos
  */
@@ -103,7 +107,8 @@ async function getPhotosByAlbumIds(albumIds) {
 }
 
 /**
- * Update a photo title/description and persist
+ * Update a photo title/description and persist to the DB.
+ * Only provided fields are updated.
  * @param {number} id - photo id
  * @param {string|null|undefined} title - new title or null/undefined to skip
  * @param {string|null|undefined} description - new description or null/undefined to skip
@@ -132,7 +137,8 @@ async function updatePhoto(id, title, description) {
 }
 
 /**
- * Add a tag to a photo and persist (idempotent)
+ * Add a tag to a photo and persist (idempotent).
+ * If the tag already exists the operation is a no-op.
  * @param {number} id - photo id
  * @param {string} tag - tag to add
  * @returns {Promise<Object>} result object

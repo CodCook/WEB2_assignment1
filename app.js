@@ -9,11 +9,17 @@ app.set('view engine', 'hbs')
 
 app.use(express.urlencoded({extended: true}))
 
+/**
+ * GET / - render the home page with a list of albums
+ */
 app.get('/', async (req , res) => {
     const albums = await business.loadAlbums()
     res.render('home', {albums: albums, layout: undefined})
 })
 
+/**
+ * GET /albums/:id - show album details and its photos
+ */
 app.get('/albums/:id', async (req, res) => {
     const id = req.params.id
     const details = await business.getAlbumDetails(id)
@@ -24,6 +30,9 @@ app.get('/albums/:id', async (req, res) => {
     res.render('albumDetails', { album: details.album, photos: details.photos, layout: undefined })
 })
 
+/**
+ * GET /photos/:id - show a single photo's details
+ */
 app.get('/photos/:id', async (req, res) => {
     const id = parseInt(req.params.id, 10)
     if (isNaN(id)) {
@@ -39,6 +48,9 @@ app.get('/photos/:id', async (req, res) => {
     res.render('photoDetails', { photo: photo, layout: undefined })
 })
 
+/**
+ * GET /edit/:id - render the edit form for a photo
+ */
 app.get('/edit/:id', async (req, res) => {
     const id = parseInt(req.params.id, 10)
     if (isNaN(id)) {
@@ -53,6 +65,9 @@ app.get('/edit/:id', async (req, res) => {
     res.render('editPhoto', { photo: photo, layout: undefined })
 })
 
+/**
+ * POST /edit-photo/:id - process edit form and update photo then redirect
+ */
 app.post('/edit-photo/:id', async (req, res) => {
     const id = parseInt(req.params.id, 10)
     if (isNaN(id)) {

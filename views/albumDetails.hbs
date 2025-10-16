@@ -6,7 +6,7 @@
     <title>Album</title>
 </head>
 <body>
-    <h1>Photos in {{album.name}} ({{photos.length}})</h1>
+    <h1>Photos in {{album.name}} — {{photos.length}} {{#if photos.[1]}}photos{{else}}{{#if photos.[0]}}photo{{else}}photos{{/if}}{{/if}}</h1>
     {{#if photos}}
         <ul>
             {{#each photos}}
