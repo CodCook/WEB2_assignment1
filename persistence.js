@@ -5,7 +5,9 @@ let client = undefined
 
 async function connectToDb(){
     if (!client){
-        client = new MongoClient('mongodb+srv://60304062:class1234@cluster0mahgoub.potrxqn.mongodb.net/')
+        // prefer environment variable for credentials, fallback to existing string
+        const uri = process.env.MONGO_URI || 'mongodb+srv://60304062:class1234@cluster0mahgoub.potrxqn.mongodb.net/'
+        client = new MongoClient(uri)
         await client.connect()
     }
 }
@@ -48,13 +50,12 @@ async function getAllAlbums() {
  * @returns {Promise<Object|null>} photo object or null
  */
 async function findPhotoById(id) {
-    const photos = await loadPhotos()
-    for (let i = 0; i < photos.length; i++) {
-        if (photos[i].id === id) {
-            return photos[i]
-        }
-    }
-    return null
+    await connectToDb()
+    const db = client.db('infs3201_fall2025')
+    const photosCollection = db.collection('photos')
+    // use a direct query so we don't need to load the entire collection
+    const photo = await photosCollection.findOne({ id: id })
+    return photo || null
 }
 
 /**
@@ -63,17 +64,12 @@ async function findPhotoById(id) {
  * @returns {Promise<Array>} album objects
  */
 async function getAlbumsByIds(ids) {
-    const albums = await getAllAlbums()
-    const result = []
-    for (let i = 0; i < albums.length; i++) {
-        for (let j = 0; j < ids.length; j++) {
-            if (albums[i].id === ids[j]) {
-                result.push(albums[i])
-                break
-            }
-        }
-    }
-    return result
+    if (!Array.isArray(ids) || ids.length === 0) return []
+    await connectToDb()
+    const db = client.db('infs3201_fall2025')
+    const albumsColl = db.collection('albums')
+    // use $in to fetch matching album docs directly
+    return await albumsColl.find({ id: { $in: ids } }).toArray()
 }
 
 /**
@@ -82,15 +78,14 @@ async function getAlbumsByIds(ids) {
  * @returns {Promise<Array>} matching album objects
  */
 async function findAlbumsByName(name) {
-    const albums = await getAllAlbums()
-    const target = (name || '').toLowerCase()
-    const matches = []
-    for (let i = 0; i < albums.length; i++) {
-        if (albums[i].name && albums[i].name.toLowerCase() === target) {
-            matches.push(albums[i])
-        }
-    }
-    return matches
+    if (!name) return []
+    await connectToDb()
+    const db = client.db('infs3201_fall2025')
+    const albumsColl = db.collection('albums')
+    // case-insensitive exact match using regex
+    function escapeRegex(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') }
+    const regex = new RegExp('^' + escapeRegex(name) + '$', 'i')
+    return await albumsColl.find({ name: { $regex: regex } }).toArray()
 }
 
 /**
@@ -99,33 +94,12 @@ async function findAlbumsByName(name) {
  * @returns {Promise<Array>} matching photos
  */
 async function getPhotosByAlbumIds(albumIds) {
-    const photos = await loadPhotos()
-    if (!Array.isArray(albumIds) || albumIds.length === 0) {
-        return []
-    }
-    const result = []
-    for (let i = 0; i < photos.length; i++) {
-        const photo = photos[i]
-        if (!Array.isArray(photo.albums)) {
-            continue
-        }
-        let belongs = false
-        for (let j = 0; j < photo.albums.length; j++) {
-            for (let k = 0; k < albumIds.length; k++) {
-                if (photo.albums[j] === albumIds[k]) {
-                    belongs = true
-                    break
-                }
-            }
-            if (belongs) {
-                break
-            }
-        }
-        if (belongs) {
-            result.push(photo)
-        }
-    }
-    return result
+    if (!Array.isArray(albumIds) || albumIds.length === 0) return []
+    await connectToDb()
+    const db = client.db('infs3201_fall2025')
+    const photosColl = db.collection('photos')
+    // find photos where the albums array contains any of the provided ids
+    return await photosColl.find({ albums: { $in: albumIds } }).toArray()
 }
 
 /**
